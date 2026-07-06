@@ -129,14 +129,14 @@ namespace SampleClient.Service.Firebase
         private static bool ShouldUseQueue(string method, string path)
         {
             // 조회 요청은 서버 상태를 바꾸지 않으므로 큐를 우회한다.
-            // 메일함/프로필 같은 read 요청이 구매 요청 뒤에서 대기하지 않게 하기 위함.
+            // 메일함/프로필 같은 read 요청이 구매나 뽑기 요청 뒤에서 대기하지 않게 하기 위함.
             if (method == UnityWebRequest.kHttpVerbGET)
             {
                 return false;
             }
 
             // bootstrap 요청은 화면 초기화용 상태 조회에 가깝기 때문에 큐를 우회한다.
-            // 단, 실제 구매 같은 상태 변경 요청은 계속 큐를 탄다.
+            // 단, 실제 구매/뽑기 같은 상태 변경 요청은 계속 큐를 탄다.
             if (IsBootstrapPath(path))
             {
                 return false;
@@ -150,7 +150,9 @@ namespace SampleClient.Service.Firebase
             // 현재 Player API에서 bootstrap 계열은 POST를 쓰지만, 클라이언트 관점에서는 초기 상태 조회다.
             // 그래서 HTTP 메서드만 보지 않고 path 기준으로 read 성격의 POST를 분리한다.
             return string.Equals(path, "/user/bootstrap", StringComparison.Ordinal) ||
-                string.Equals(path, "/shop/bootstrap", StringComparison.Ordinal);
+                string.Equals(path, "/shop/bootstrap", StringComparison.Ordinal) ||
+                string.Equals(path, "/gacha/bootstrap", StringComparison.Ordinal);
+            // 중략: 동일한 기준으로 우회하는 다른 도메인 bootstrap 경로
         }
 
         /// <summary>
@@ -179,23 +181,22 @@ namespace SampleClient.Service.Firebase
             }
             catch (PlayerApiException e)
             {
-                // ID 토큰이 만료된 경우 한 번만 새 토큰으로 재시도.
-                // 서버가 밴 유저라고 알려준 경우에는 재시도하지 않음.
-                if (e.HttpStatus == 401 && e.DomainCode != AdminCode.USER_BANNED)
+                // ID 토큰 인증 실패는 HTTP 401로 내려오며, 밴 계정이 아니면 토큰을 강제 갱신한 뒤 한 번만 재시도한다.
+                // body code가 USER_BANNED이면 contract에 따라 재시도하지 않고 호출부로 예외를 전달한다.
+                if (e.HttpStatus == CommonCode.UNAUTHORIZED && e.DomainCode != AdminCode.USER_BANNED)
                 {
-                    Log.LogMessage($"[PlayerApiClient] ID 토큰 만료: {e.Message}", Log.LogLevel.Debug);
+                    Log.LogMessage($"[PlayerApiClient] ID 토큰 인증 실패, 토큰 갱신 후 재시도: {e.Message}", Log.LogLevel.Debug);
                     var refreshedId = await GetIdTokenAsync(forceRefresh: true);
                     return await SendOnceAsync(method, path, query, body, refreshedId, appCheckToken, cancellationToken);
                 }
 
-                // AppCheck 문제는 HTTP 상태가 아니라 서버 도메인 코드로 판단.
-                // 토큰을 새로 받아 같은 요청을 한 번만 다시 보냄.
-                if (e.DomainCode == CommonCode.APP_CHECK_REQUIRED ||
-                    e.DomainCode == CommonCode.APP_CHECK_INVALID)
+                // AppCheck 실패는 서버 계약상 HTTP 403과 body code 440/441 조합으로 내려온다.
+                // AppCheck 토큰만 강제 갱신한 뒤 같은 요청을 한 번만 재시도한다.
+                if (e.HttpStatus == CommonCode.FORBIDDEN &&
+                    (e.DomainCode == CommonCode.APP_CHECK_REQUIRED || e.DomainCode == CommonCode.APP_CHECK_INVALID))
                 {
                     Log.LogMessage($"[PlayerApiClient] AppCheck 토큰 문제: {e.Message}", Log.LogLevel.Debug);
                     var refreshedAppCheck = await GetAppCheckTokenAsync(forceRefresh: true);
-                    Log.LogMessage($"[PlayerApiClient] 새로 갱신된 AppCheck 토큰 길이: {refreshedAppCheck.Length}", Log.LogLevel.Debug);
                     return await SendOnceAsync(method, path, query, body, idToken, refreshedAppCheck, cancellationToken);
                 }
 

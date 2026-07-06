@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace SampleClient.Service.Catalog
 {
-    // 공개 포트폴리오용 샘플 모델입니다.
+    // 포트폴리오용 샘플 모델입니다.
     // 정책 및 운영툴 전용 필드는 중략했습니다.
 
     [Serializable]
@@ -49,6 +49,28 @@ namespace SampleClient.Service.Catalog
     {
         public int itemId;
         public int quantity;
+    }
+
+    [Serializable]
+    public class GachaCatalog
+    {
+        public string catalogVersion;
+        public GachaInfo[] gachas;
+        // 중략: 스키마 및 배포 메타데이터
+    }
+
+    [Serializable]
+    public class GachaInfo
+    {
+        public int gachaId;
+        public string code;
+        public string name;
+        public string description;
+        public Price price;
+        public bool isActive;
+        public int sortOrder;
+        // 중략: 노출 정책, 운영 기간, 등급별 확률/보상 구성
+        //       실제 확률 계산과 결과 확정은 서버가 담당한다.
     }
 
     [Serializable]

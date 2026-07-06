@@ -1,6 +1,5 @@
 ﻿using System;
 using Cysharp.Threading.Tasks;
-using SampleClient.UI;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using SampleClient.Core;
@@ -55,16 +54,14 @@ namespace SampleClient.Scene
         }
 
         /// <summary>
-        /// 로그인 성공 후 메인 전환 
-        /// MainScene을 로딩 UI와 함께 로드한다.
+        /// 로그인 성공 후 MainScene으로 전환한다.
+        /// 로딩 UI는 호출 흐름이 관리하고, SceneLoader는 씬 전환만 담당한다.
         /// </summary>
         public async UniTask LoadMainAsync()
         {
             try
             {
-                // MainScene은 진입 직후 MainFlow가 bootstrap을 이어서 수행하므로,
-                // 씬 로드 완료 시점이 아니라 bootstrap 완료 시점에 로딩을 닫는다.
-                var ok = await LoadSingleWithLoadingAsync(SceneNames.Main, false);
+                var ok = await LoadSingleAsync(SceneNames.Main);
                 _mainLoaded = ok;
             }
             catch (Exception e)
@@ -75,14 +72,14 @@ namespace SampleClient.Scene
         }
 
         /// <summary>
-        /// 로그인 씬으로 전환 
-        /// LoginScene을 로딩 UI와 함께 로드한다.
+        /// LoginScene으로 전환한다.
+        /// 로딩 UI는 호출 흐름이 관리하고, SceneLoader는 씬 전환만 담당한다.
         /// </summary>
         public async UniTask LoadLogInAsync()
         {
             try
             {
-                var ok = await LoadSingleWithLoadingAsync(SceneNames.LogIn);
+                var ok = await LoadSingleAsync(SceneNames.LogIn);
                 _mainLoaded = false;
                 if (!ok)
                 {
@@ -181,17 +178,10 @@ namespace SampleClient.Scene
         }
 
         /// <summary>
-        /// 로딩 UI를 표시하고 지정 씬으로 단일 전환한다.
+        /// 기존 씬을 정리하면서 지정 씬을 단일 활성 씬으로 로드한다.
+        /// 로딩 UI의 표시와 종료는 호출 흐름(BootFlow, MainFlow, LoginPresenter 등)이 담당한다.
         /// </summary>
-        public async UniTask<bool> LoadSingleWithLoadingAsync(string sceneName)
-        {
-            return await LoadSingleWithLoadingAsync(sceneName, true);
-        }
-
-        /// <summary>
-        /// 기존 씬을 정리하면서 지정 씬을 로드하고 로딩 UI 종료 여부를 제어한다.
-        /// </summary>
-        private async UniTask<bool> LoadSingleWithLoadingAsync(string sceneName, bool hideLoadingOnComplete)
+        public async UniTask<bool> LoadSingleAsync(string sceneName)
         {
             if (string.IsNullOrEmpty(sceneName))
             {
@@ -254,12 +244,6 @@ namespace SampleClient.Scene
             {
                 Debug.LogError($"[SceneLoader] 씬 전환 실패: {e}");
                 return false;
-            }
-            finally
-            {
-                if (hideLoadingOnComplete)
-                {
-                }
             }
         }
 

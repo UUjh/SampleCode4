@@ -1,39 +1,52 @@
-﻿using System;
 using System.Collections.Generic;
-using Cysharp.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace SampleClient.UI.Store
+namespace SampleClient.UI.Shop
 {
     /// <summary>
     /// 상점 화면의 Unity UI 바인딩 샘플.
-    /// Presenter가 만든 표시 모델을 받아 목록, 선택 상품, 지갑 상태만 갱신한다.
-    /// 실제 프로젝트의 탭 구성, 캐릭터 미리보기, 이벤트 배너 등은 공개 샘플에서 중략했다.
+    /// Presenter가 만든 표시 모델을 받아 섹션, 목록, 선택 상품, 지갑 상태만 갱신한다.
+    /// 실제 프로젝트의 무한 스크롤(GPM InfiniteScroll), 캐릭터 미리보기, 이벤트 배너 등은 샘플에서 중략했습니다.
     /// </summary>
-    public sealed class StoreView : UIView, IStoreView
+    public sealed class ShopView : UIView, IShopView
     {
+        [Header("Section")]
+        [SerializeField] private GameObject _featuredSection;
+        [SerializeField] private GameObject _characterShopSection;
+        [SerializeField] private GameObject _resourcesSection;
+
+        [Header("Items")]
         [SerializeField] private Transform _itemRoot;
-        [SerializeField] private StoreItemView _itemPrefab;
+        [SerializeField] private ShopItemView _itemPrefab;
+
+        [Header("Selected / Wallet")]
         [SerializeField] private TextMeshProUGUI _selectedTitleText;
         [SerializeField] private TextMeshProUGUI _selectedPriceText;
         [SerializeField] private TextMeshProUGUI _walletText;
         [SerializeField] private TextMeshProUGUI _errorText;
         [SerializeField] private Button _purchaseButton;
 
-        private readonly List<StoreItemView> _items = new List<StoreItemView>();
-        private StorePresenter _presenter;
+        private readonly List<ShopItemView> _items = new List<ShopItemView>();
+        private ShopPresenter _presenter;
         private int _selectedOfferId;
 
-        public void Bind(StorePresenter presenter)
+        public void Bind(ShopPresenter presenter)
         {
             _presenter = presenter;
             SetButtonInteractable(_purchaseButton, false);
         }
 
-        public void SetItems(IReadOnlyList<StoreItemViewModel> items)
+        public void ShowSection(ShopSectionType sectionType)
+        {
+            SetActive(_featuredSection, sectionType == ShopSectionType.Featured);
+            SetActive(_characterShopSection, sectionType == ShopSectionType.CharacterShop);
+            SetActive(_resourcesSection, sectionType == ShopSectionType.Resources);
+        }
+
+        public void SetItems(IReadOnlyList<ShopItemViewModel> items)
         {
             ClearItems();
 
@@ -50,19 +63,19 @@ namespace SampleClient.UI.Store
             }
         }
 
-        public void SetSelectedItem(StoreItemViewModel item)
+        public void SetSelectedItem(ShopItemViewModel item)
         {
             _selectedOfferId = item != null ? item.offerId : 0;
             SetText(_selectedTitleText, item != null ? item.title : string.Empty);
             SetText(_selectedPriceText, item != null ? item.priceAmount.ToString() : string.Empty);
-            SetButtonInteractable(_purchaseButton, item != null && !item.owned);
+            SetButtonInteractable(_purchaseButton, item != null && !item.owned && item.purchasable);
 
             if (_purchaseButton != null)
             {
                 _purchaseButton.onClick.RemoveAllListeners();
                 if (_selectedOfferId != 0)
                 {
-                    _purchaseButton.onClick.AddListener(() => _presenter.PurchaseAsync(_selectedOfferId).Forget());
+                    _purchaseButton.onClick.AddListener(() => _presenter.OnClickPurchase(_selectedOfferId));
                 }
             }
         }
@@ -124,4 +137,3 @@ namespace SampleClient.UI.Store
         }
     }
 }
-

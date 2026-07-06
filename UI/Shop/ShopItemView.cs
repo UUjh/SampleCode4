@@ -1,15 +1,15 @@
-﻿using System;
+using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace SampleClient.UI.Store
+namespace SampleClient.UI.Shop
 {
     /// <summary>
     /// 상점 목록의 단일 셀 View 샘플.
     /// 이미지 로딩과 등급별 스타일 적용은 Addressables/ScriptableObject 예시로 분리하고 여기서는 중략했다.
     /// </summary>
-    public sealed class StoreItemView : MonoBehaviour
+    public sealed class ShopItemView : MonoBehaviour
     {
         [SerializeField] private Button _button;
         [SerializeField] private TextMeshProUGUI _titleText;
@@ -19,7 +19,7 @@ namespace SampleClient.UI.Store
         private int _offerId;
         private Action<int> _onSelected;
 
-        public void Bind(StoreItemViewModel model, Action<int> onSelected)
+        public void Bind(ShopItemViewModel model, Action<int> onSelected)
         {
             _offerId = model != null ? model.offerId : 0;
             _onSelected = onSelected;
@@ -60,4 +60,3 @@ namespace SampleClient.UI.Store
         }
     }
 }
-

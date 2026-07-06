@@ -11,7 +11,7 @@ namespace SampleClient.Service.Catalog
 {
     /// <summary>
     /// 원격 카탈로그 meta를 받고 hash가 같으면 로컬 캐시를 재사용하는 샘플 서비스.
-    /// 공개 샘플에서는 상점/아이템 카탈로그만 남겼습니다.
+    /// 샘플에서는 상점/가챠/아이템 카탈로그만 남겼습니다.
     /// </summary>
     public static class CatalogService
     {
@@ -22,6 +22,11 @@ namespace SampleClient.Service.Catalog
         /// 현재 런타임에서 사용 중인 상점 카탈로그 캐시.
         /// </summary>
         public static ShopCatalog Shop { get; private set; }
+
+        /// <summary>
+        /// 현재 런타임에서 사용 중인 가챠 카탈로그 캐시.
+        /// </summary>
+        public static GachaCatalog Gacha { get; private set; }
 
         /// <summary>
         /// 현재 런타임에서 사용 중인 아이템 카탈로그 캐시.
@@ -38,6 +43,18 @@ namespace SampleClient.Service.Catalog
             var json = await LoadCatalogJsonAsync("/shop/shop-client-meta.latest.json", "shop-client", forceRefresh);
             Shop = JsonConvert.DeserializeObject<ShopCatalog>(json);
             return Shop;
+        }
+
+        /// <summary>
+        /// 가챠 표시용 정적 카탈로그를 로드한다.
+        /// </summary>
+        /// <param name="forceRefresh">true이면 로컬 캐시 검증을 건너뛰고 원격 카탈로그를 다시 받는다.</param>
+        /// <returns>역직렬화된 가챠 카탈로그.</returns>
+        public static async UniTask<GachaCatalog> LoadGachaAsync(bool forceRefresh = false)
+        {
+            var json = await LoadCatalogJsonAsync("/gacha/gacha-client-meta.latest.json", "gacha-client", forceRefresh);
+            Gacha = JsonConvert.DeserializeObject<GachaCatalog>(json);
+            return Gacha;
         }
 
         /// <summary>
@@ -105,6 +122,24 @@ namespace SampleClient.Service.Catalog
         public static string GetItemCategory(ItemCatalog catalog, int? itemId)
         {
             return itemId.HasValue && TryGetItem(catalog, itemId.Value, out var item) ? item.category : string.Empty;
+        }
+
+        /// <summary>
+        /// 등급 문자열을 정렬 비교용 순위 값으로 변환한다.
+        /// UI가 등급 문자열을 직접 비교하지 않고 카탈로그 계층의 기준 하나를 공유하게 한다.
+        /// </summary>
+        /// <param name="rarity">normal, rare, epic, legend 등 일반화된 등급 문자열.</param>
+        /// <returns>높을수록 상위 등급. 알 수 없는 등급이면 -1.</returns>
+        public static int GetRarityRank(string rarity)
+        {
+            switch (rarity)
+            {
+                case "normal": return 0;
+                case "rare": return 1;
+                case "epic": return 2;
+                case "legend": return 3;
+                default: return -1;
+            }
         }
 
         /// <summary>

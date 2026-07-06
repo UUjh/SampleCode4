@@ -139,11 +139,28 @@ namespace SampleClient.Service.Firebase
 
         public void SignOut()
         {
-            if (_auth == null)
-                return;
+            DisposeApiClient();
 
-            _auth.SignOut();
-            Log.LogMessage("[FirebaseService] 로컬 Firebase 세션을 해제했습니다.", Log.LogLevel.Debug);
+            if (_auth != null)
+            {
+                _auth.SignOut();
+            }
+
+            _ready = false;
+            _initializing = false;
+
+            Log.LogMessage("[FirebaseService] 로컬 Firebase 세션과 Player API 클라이언트를 해제했습니다.", Log.LogLevel.Debug);
+        }
+
+        /// <summary>
+        /// Player API 클라이언트와 전송 큐를 정리한다.
+        /// SignOut 또는 서비스 Dispose 시 대기 중인 서버 요청이 다음 세션으로 넘어가지 않게 한다.
+        /// </summary>
+        private void DisposeApiClient()
+        {
+            _apiClient?.Dispose();
+            _apiClient = null;
+            _api = null;
         }
 
         /// <summary>
@@ -151,9 +168,8 @@ namespace SampleClient.Service.Firebase
         /// </summary>
         protected override void Dispose()
         {
-            _apiClient?.Dispose();
-            _apiClient = null;
-            _api = null;
+            DisposeApiClient();
+
             _auth = null;
             _appCheck = null;
             _ready = false;
