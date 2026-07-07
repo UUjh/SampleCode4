@@ -1,4 +1,5 @@
 using System;
+using R3;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -19,6 +20,16 @@ namespace SampleClient.UI.Shop
         private int _offerId;
         private Action<int> _onSelected;
 
+        private void Awake()
+        {
+            if (_button != null)
+            {
+                _button.OnClickAsObservable()
+                    .Subscribe(this, static (_, view) => view.OnClickItem())
+                    .AddTo(this);
+            }
+        }
+
         public void Bind(ShopItemViewModel model, Action<int> onSelected)
         {
             _offerId = model != null ? model.offerId : 0;
@@ -27,12 +38,11 @@ namespace SampleClient.UI.Shop
             SetText(_titleText, model != null ? model.title : string.Empty);
             SetText(_priceText, model != null ? model.priceAmount.ToString() : string.Empty);
             SetActive(_ownedBadge, model != null && model.owned);
+        }
 
-            if (_button != null)
-            {
-                _button.onClick.RemoveAllListeners();
-                _button.onClick.AddListener(() => _onSelected?.Invoke(_offerId));
-            }
+        private void OnClickItem()
+        {
+            _onSelected?.Invoke(_offerId);
         }
 
         public void SetInputEnabled(bool enabled)

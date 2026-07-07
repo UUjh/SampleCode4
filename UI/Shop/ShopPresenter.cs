@@ -5,6 +5,7 @@ using SampleClient.Service.Bootstrap;
 using SampleClient.Service.Catalog;
 using SampleClient.Service.Firebase;
 using SampleClient.Service.Shop;
+using SampleClient.UI.Common.Currency;
 using SampleClient.Utils;
 using UnityEngine;
 
@@ -87,6 +88,8 @@ namespace SampleClient.UI.Shop
                 return;
             }
 
+            // 선택 상품이 바뀌면 이전 상품 기준 requestId를 재사용하면 안 된다.
+            ClearPurchaseRequest();
             _view?.SetSelectedItem(CreateViewModel(offer, GameBootstrapService.Data));
         }
 
@@ -134,7 +137,12 @@ namespace SampleClient.UI.Shop
                 if (ShopPurchaseService.NeedsBootstrapAfterPurchase(offerId))
                 {
                     // 릴레이 상품은 다음 단계나 다른 상품 상태가 바뀔 수 있으므로 서버 기준 전체 상태를 다시 받는다.
-                    ShopPurchaseService.ApplyPurchaseUserState(purchase);
+                    var currencyChanged = ShopPurchaseService.ApplyPurchaseUserState(purchase);
+                    if (currencyChanged)
+                    {
+                        PublishCurrencyChanged();
+                    }
+
                     await RefreshShopBootstrapAsync();
                 }
                 else
@@ -145,7 +153,10 @@ namespace SampleClient.UI.Shop
                         _catalogVersion = result.catalogVersion;
                     }
 
-                    // 중략: result.currencyChanged 기준으로 재화 변경 메시지 발행
+                    if (result.currencyChanged)
+                    {
+                        PublishCurrencyChanged();
+                    }
                 }
 
                 if (CanShowPurchaseResult())
@@ -345,6 +356,17 @@ namespace SampleClient.UI.Shop
             }
 
             return state;
+        }
+
+        /// <summary>
+        /// 구매/뽑기/메일 수령처럼 재화가 바뀌는 기능들이 같은 방식으로 상단바를 갱신하도록 메시지를 발행한다.
+        /// </summary>
+        private static void PublishCurrencyChanged()
+        {
+            var currencies = GameBootstrapService.Data != null && GameBootstrapService.Data.wallet != null
+                ? GameBootstrapService.Data.wallet.currencies
+                : null;
+            CurrencyMessages.Publish(currencies);
         }
     }
 

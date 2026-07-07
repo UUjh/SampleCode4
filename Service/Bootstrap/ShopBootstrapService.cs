@@ -15,7 +15,7 @@ namespace SampleClient.Service.Bootstrap
         /// <returns>상점 UI 구성용 정적 카탈로그와 유저별 서버 Bootstrap 상태.</returns>
         internal static async UniTask<(ShopCatalog catalog, ShopBootstrapResponse bootstrap)> LoadAsync(bool forceCatalogRefresh)
         {
-            // 상점 UI 표시용 정적 카탈로그를 먼저 준비힌다.
+            // 상점 UI 표시용 정적 카탈로그를 먼저 준비한다.
             // 서버 Bootstrap 요청에는 catalogVersion을 전달해 서버 상태와 클라이언트 카탈로그 기준을 맞춘다.
             var catalog = await CatalogService.LoadShopAsync(forceCatalogRefresh);
             var bootstrap = await RequestBootstrapAsync(catalog != null ? catalog.catalogVersion : null);

@@ -1,18 +1,20 @@
 # SampleCode4
 
-Unity 클라이언트 포트폴리오 공개용 C# 샘플 코드입니다.
+Project T 모바일 2D 파티 게임에서 제가 담당한 아웃게임 클라이언트 영역을 포트폴리오용으로 축약한 Unity C# 샘플입니다.
 아웃게임 UI 전환(scene/prefab window), 서버 Bootstrap/카탈로그 동기화, Firebase Player API 통신,
-requestId 멱등성 기반 구매/뽑기 재시도, Addressables 리소스 관리 구조를 보여줍니다.
+requestId 멱등성 기반 구매/뽑기 재시도, R3/MessagePipe 기반 UI 상태 전파, Addressables 리소스 관리 구조를 보여줍니다.
 
 실제 서비스 URL, 토큰, 에셋 경로, 세부 정책, 전체 Response 모델, 프로젝트 고유 수치/공식은 제거하거나 `중략` 처리했습니다.
 컬렉션, 메일, 일일보상 등 같은 패턴으로 확장되는 콘텐츠 UI는 샘플에서 제외했습니다.
+MessagePipe provider는 `SampleRuntime -> AppServices`에서 초기화하고, UI 도메인은 `CurrencyMessages` 발행/구독 경계만 의존합니다.
 
 ## 폴더 구조
 
 ```
 Scene/
   PersistentSingleton.cs        // DontDestroyOnLoad 기반 공통 싱글턴
-  SampleRuntime.cs              // 단독 씬 테스트용 EventSystem 보정
+  AppServices.cs                // MessagePipe provider 초기화
+  SampleRuntime.cs              // BeforeSceneLoad 전역 서비스 준비, 단독 씬 테스트용 EventSystem 보정
   SceneLoader.cs                // Single/Additive Scene 로드·언로드 유틸리티
   SceneNames.cs                 // 샘플에서 사용하는 Scene 이름 관리
   Boot/BootFlow.cs              // Firebase 초기화와 첫 씬 결정
@@ -52,27 +54,39 @@ UI/
     UIWindowService.CanvasSorting.cs // window/overlay Canvas 정렬 보정
     UIWindowType.cs
   Shop/                         // 상점 Presenter/View/ViewModel/SectionType
-  Common/                       // ScriptableObject 프리셋, 공통 UI 컴포넌트
+  Common/                       // Currency MessagePipe/R3 View, ScriptableObject 프리셋, 공통 UI 컴포넌트
 
 Utils/
   Log.cs
 ```
 
-## 사용 기술
 
 - Unity 6
 - Firebase Auth / AppCheck / Cloud Functions REST API
 - Addressable Asset
 - UniTask
 - R3
+- MessagePipe
 - Newtonsoft.Json
 - ScriptableObject
+
+## 샘플에서 확인 가능한 구현
+
+- UniTask 기반 비동기 UI / 서버 흐름
+- Firebase REST API 통신 구조
+- Addressables prefab / sprite 수명 관리
+- R3 기반 View 생명주기 구독
+- MessagePipe 기반 재화 변경 이벤트 전파
+- requestId 멱등성 재시도 정책
+- Bootstrap / Catalog 캐시 동기화
+- MVP 기반 Presenter/View 분리 구조
 
 ## 주요 구현 포인트
 
 - Additive Scene window와 Addressables prefab window를 하나의 서비스로 관리하는 아웃게임 UI 전환 구조
 - route stack 기반 뒤로가기와 window 작업 동시성 제어(busy 상태, pending close-all)
 - MVP 기반 Presenter/View 분리 구조
+- R3 기반 View 생명주기 구독, MessagePipe 기반 재화 변경 이벤트 전파 구조
 - 유저/상점/가챠/아이템 Bootstrap 병렬 로드와 중복 요청 병합(UniTaskCompletionSource)
 - catalogVersion, SHA-256 해시 검증, 로컬 캐시를 활용한 카탈로그 관리
 - 구매/뽑기 요청의 requestId 멱등성과 재시도 정책 분리(RequestIdRetryPolicy)

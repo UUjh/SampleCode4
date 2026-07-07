@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
+using R3;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -32,10 +33,13 @@ namespace SampleClient.UI.Shop
         private readonly List<ShopItemView> _items = new List<ShopItemView>();
         private ShopPresenter _presenter;
         private int _selectedOfferId;
+        private bool _selectedPurchasable;
 
         public void Bind(ShopPresenter presenter)
         {
             _presenter = presenter;
+            ClearSubscriptions();
+            BindPurchaseButton();
             SetButtonInteractable(_purchaseButton, false);
         }
 
@@ -66,18 +70,28 @@ namespace SampleClient.UI.Shop
         public void SetSelectedItem(ShopItemViewModel item)
         {
             _selectedOfferId = item != null ? item.offerId : 0;
+            _selectedPurchasable = item != null && !item.owned && item.purchasable;
             SetText(_selectedTitleText, item != null ? item.title : string.Empty);
             SetText(_selectedPriceText, item != null ? item.priceAmount.ToString() : string.Empty);
-            SetButtonInteractable(_purchaseButton, item != null && !item.owned && item.purchasable);
+            SetButtonInteractable(_purchaseButton, _selectedPurchasable);
+        }
 
-            if (_purchaseButton != null)
+        private void BindPurchaseButton()
+        {
+            if (_purchaseButton == null)
             {
-                _purchaseButton.onClick.RemoveAllListeners();
-                if (_selectedOfferId != 0)
-                {
-                    _purchaseButton.onClick.AddListener(() => _presenter.OnClickPurchase(_selectedOfferId));
-                }
+                return;
             }
+
+            AddSubscription(_purchaseButton
+                .OnClickAsObservable()
+                .Subscribe(_ =>
+                {
+                    if (_selectedOfferId != 0 && _selectedPurchasable)
+                    {
+                        _presenter?.OnClickPurchase(_selectedOfferId);
+                    }
+                }));
         }
 
         public void SetWallet(IDictionary<string, JToken> currencies)
@@ -102,7 +116,7 @@ namespace SampleClient.UI.Shop
                 _items[i].SetInputEnabled(enabled);
             }
 
-            SetButtonInteractable(_purchaseButton, enabled && _selectedOfferId != 0);
+            SetButtonInteractable(_purchaseButton, enabled && _selectedOfferId != 0 && _selectedPurchasable);
         }
 
         public void ShowError(string message)

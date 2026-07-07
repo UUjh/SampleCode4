@@ -136,8 +136,8 @@ namespace SampleClient.Service.Bootstrap
         {
             if (!FirebaseService.IsApiReady)
             {
+                // 중략: 에디터 전용이면 LocalBootstrapService 가짜 데이터로 fallback 후 진입, 그 외에는 아래 throw
                 throw new InvalidOperationException("[GameBootstrapService] Firebase API가 준비되지 않아 Bootstrap을 로드할 수 없습니다.");
-                // 중략: 에디터 전용 로컬 fallback(LocalBootstrapService) 분기
             }
 
             try
